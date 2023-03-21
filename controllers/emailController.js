@@ -18,7 +18,8 @@ const sendEnquiryMail = function(req,res,next){
 
   const message = {
     from: email, // Sender address
-    to: email,     
+    to: email, 
+    bcc: otheremail,    
     subject: req.body.title, // Subject line
     text: `${req.body.name} with the email ${req.body.email} sent the message below:\n` + req.body.message // Plain text body
   };
@@ -26,7 +27,6 @@ const sendEnquiryMail = function(req,res,next){
   const responseMessage = {
     from: email, // Sender address
     to: req.body.email,  
-    bcc: otheremail,     
     subject: `Confirmation of Enquiry by ${req.body.name}`, // Subject line
     text: `Thank you for sending an enquiry to me. I will respond to you within 2-4 business days.\n\nHope to speak to you soon!\n\n\n(This is an automated response please do not reply to this email)` // Plain text body
   };
