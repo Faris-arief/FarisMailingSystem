@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * Module dependencies.
  */
@@ -7,12 +5,13 @@
 var app = require('../app');
 var debug = require('debug')('untitled:server');
 var http = require('http');
+const { Server } = require('socket.io'); 
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
+var port = normalizePort(process.env.PORT || '4000');
 app.set('port', port);
 
 /**
@@ -20,6 +19,80 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+  },
+});
+
+const CHAT_BOT = 'NFA Bot'; // Add this
+
+let allUsers = []; // All users in current chat room
+let roomMappedMessages = {};
+io.on('connection', (socket) => {
+  console.log(`Connection created ${socket.id}`);
+
+  socket.on('join_room', (data) => {
+    const { username,name, room } = data; // Data sent from client when join_room event emitted
+    socket.join(room); // Join the user to a socket room
+    allUsers.push({ id: socket.id, username, room });
+ 
+    let createdTime = Date.now();
+
+    roomMappedMessages[room] = []
+
+    const enterMessage = {
+      message: `${name} has joined the chat room`,
+      username: CHAT_BOT,
+      name: CHAT_BOT,
+      createdTime,
+    }
+    const introductoryMessage = 
+    {
+      message: `Welcome ${name}`,
+      name: CHAT_BOT,
+      username: CHAT_BOT,
+      createdTime,
+    };
+    
+    socket.to(room).emit('receive_message', enterMessage);
+
+    socket.to(room).emit('receive_message', introductoryMessage);
+    roomMappedMessages[room].push(enterMessage, introductoryMessage);
+    
+  });
+
+  // We can write our socket event listeners in here...
+  socket.on('send_message', (data) => {
+    const { message, username,name, room, createdTime } = data;
+    io.in(room).emit('receive_message', data); // Send to all users in room, including sender
+    roomMappedMessages[room].push(enterMessage, 
+      {
+      message: message,
+      username: username,
+      name: name,
+      createdTime,
+      });
+
+  });
+
+  socket.on('leave_room', (data) => {
+    const { room, username,name, createdTime } = data;
+    socket.leave(room);
+    const __createdtime__ = Date.now();
+    // Remove user from memory
+    allUsers =  allUsers.filter((user) => user.id != socket.id);
+    //socket.to(room).emit('chatroom_users', allUsers);
+    roomMappedMessages[room].push(
+      {
+        message: `${username} has left the chat`,
+        username: username,
+        name: name,
+        createdTime,
+        });
+      });
+});
 
 /**
  * Listen on provided port, on all network interfaces.
