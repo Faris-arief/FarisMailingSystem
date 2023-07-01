@@ -97,32 +97,36 @@ io.on('connection', (socket) => {
       );
 
       console.log(`${username} has left the chat`,)
-      io.to(socket.id).emit('leave', 'Please leave the chat!');
+      io.to(room).to(socket.id).emit('leave', 'Please leave the chat!');
 
       
       socket.leave(room);
       allUsers =  allUsers.filter((user) => user.id != socket.id);
       //socket.to(room).emit('chatroom_users', allUsers);
-      return
     }
 
   });
 
   socket.on('leave_room', (data) => {
     const { room, username,name, createdTime } = data;
-    socket.leave(room);
-    // Remove user from memory
-    allUsers =  allUsers.filter((user) => user.id != socket.id);
-    //socket.to(room).emit('chatroom_users', allUsers);
+    const leaveMessage = {
+      message: `${username} has left the chat`,
+      username: username,
+      name: name,
+      createdTime,
+    }
     roomMappedMessages[room].push(
-      {
-        message: `${username} has left the chat`,
-        username: username,
-        name: name,
-        createdTime,
-        });
-      });
+      leaveMessage
+    );
+
+    console.log(`${username} has left the chat`,)
+    io.to(room).to(socket.id).emit('leave', 'Please leave the chat!');
+
+    
+    socket.leave(room);
+    allUsers =  allUsers.filter((user) => user.id != socket.id);
 });
+})
 
 /**
  * Listen on provided port, on all network interfaces.
