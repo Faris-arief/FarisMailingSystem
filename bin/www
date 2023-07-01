@@ -50,15 +50,19 @@ io.on('connection', (socket) => {
     }
     const introductoryMessage = 
     {
-      message: `Welcome ${name}`,
+      message: `Welcome ${name},\n if you would like to leave the chat just type 'leave' or 'exit'`,
       name: CHAT_BOT,
       username: CHAT_BOT,
       createdTime,
     };
     
+    console.log("User entered with socket", socket.id);
+    console.log("User entered with email", username);
+    console.log(`User ${name} entered room ${room}`);
+    console.log(`Bot will start conversing`, introductoryMessage   )
     socket.to(room).emit('receive_message', enterMessage);
+    io.in(room).emit('receive_message', introductoryMessage);
 
-    socket.to(room).emit('receive_message', introductoryMessage);
     roomMappedMessages[room].push(enterMessage, introductoryMessage);
     
   });
@@ -66,8 +70,13 @@ io.on('connection', (socket) => {
   // We can write our socket event listeners in here...
   socket.on('send_message', (data) => {
     const { message, username,name, room, createdTime } = data;
+    if(roomMappedMessages[room] == null)
+      roomMappedMessages[room] = []
+
+
     io.in(room).emit('receive_message', data); // Send to all users in room, including sender
-    roomMappedMessages[room].push(enterMessage, 
+    console.log(`User ${username} spoke in room ${room}: ${message}`);
+    roomMappedMessages[room].push(
       {
       message: message,
       username: username,
@@ -75,12 +84,33 @@ io.on('connection', (socket) => {
       createdTime,
       });
 
+    const messageConfirmation = message.toLowerCase().trim()
+    if(messageConfirmation == "leave" || messageConfirmation == "exit"){
+      const leaveMessage = {
+        message: `${username} has left the chat`,
+        username: username,
+        name: name,
+        createdTime,
+      }
+      roomMappedMessages[room].push(
+        leaveMessage
+      );
+
+      console.log(`${username} has left the chat`,)
+      io.to(socket.id).emit('leave', 'Please leave the chat!');
+
+      
+      socket.leave(room);
+      allUsers =  allUsers.filter((user) => user.id != socket.id);
+      //socket.to(room).emit('chatroom_users', allUsers);
+      return
+    }
+
   });
 
   socket.on('leave_room', (data) => {
     const { room, username,name, createdTime } = data;
     socket.leave(room);
-    const __createdtime__ = Date.now();
     // Remove user from memory
     allUsers =  allUsers.filter((user) => user.id != socket.id);
     //socket.to(room).emit('chatroom_users', allUsers);
