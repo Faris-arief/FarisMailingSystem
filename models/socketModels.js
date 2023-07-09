@@ -83,7 +83,9 @@ const Socket = (server) => {
                 leaveMessage
             );
             socket.leave(room);
+            const usersInRoom = allUsers.filter((user) => user.room == room).map(user=> user.id);
             allUsers = allUsers.filter((user) => user.room != room);
+            io.to(room).to(usersInRoom).emit('leave', 'Please leave the chat!');
             //This is where we should send an email of all the messages we have sent
         });
 
