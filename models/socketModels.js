@@ -1,9 +1,10 @@
 const { Server } = require('socket.io');
+const {corsorigin} = require('../config/config.js')
 
 const Socket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: 'https://www.nikfarisarief.com',
+            origin: corsorigin,
             methods: ['GET', 'POST'],
         },
     });

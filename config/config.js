@@ -4,5 +4,6 @@ module.exports = {
   email: process.env.EMAIL_ADDRESS,
   password: process.env.EMAIL_KEY,
   service: process.env.PROVIDER,
-  otheremail: process.env.BCC_EMAIL
+  otheremail: process.env.BCC_EMAIL,
+  corsorigin: process.env.CORS_ORIGIN,
 };
