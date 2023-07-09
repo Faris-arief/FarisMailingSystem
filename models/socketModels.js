@@ -3,26 +3,42 @@ const { Server } = require('socket.io');
 const Socket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: 'http://localhost:3000',
+            origin: 'https://www.nikfarisarief.com/',
             methods: ['GET', 'POST'],
         },
     });
 
-    const CHAT_BOT = 'NFA Bot'; // Add this
-
+    let adminUsers = [];
     let allUsers = []; // All users in current chat room
     let roomMappedMessages = {};
+
+    const alertAdmin = ()=>{
+        adminUsers.forEach(admin=>{
+          io.to(admin.id).emit('userslist', allUsers);
+        })
+    }
+
+    function clearAdminArray() {
+        adminUsers = [];
+        console.log("Admin Array cleared!");
+      }
+      
+    setInterval(clearAdminArray, 30 * 60 * 1000) 
+
+    const CHAT_BOT = 'NFA Bot'; // Add this
     io.on('connection', (socket) => {
         console.log(`Connection created ${socket.id}`);
 
         //Admin section
         socket.on('admin_get_users', () => {
-            io.to(socket.id).emit('userslist', allUsers);
+            if(!adminUsers.find(s=> s.id == socket.id))
+                adminUsers.push(socket);
+            alertAdmin()
         });
 
-        socket.on('admin_get_user_messages', (data) => {
+        socket.on('admin_get_room_messages', (data) => {
             const { username, name, room } = data;
-            io.to(socket.id).emit('userslist', allUsers);
+            io.to(socket.id).emit('usermessages', roomMappedMessages[room]);
         });
 
         socket.on('admin_join_room', (data) => {
@@ -38,9 +54,8 @@ const Socket = (server) => {
             }
 
             console.log(`Admin has entered room ${room}`);
-            socket.to(room).emit('receive_message', enterMessage);
+            // socket.to(room).emit('receive_message', enterMessage);
             roomMappedMessages[room].push(enterMessage);
-
         });
 
         socket.on('admin_send_message', (data) => {
@@ -71,12 +86,17 @@ const Socket = (server) => {
             //This is where we should send an email of all the messages we have sent
         });
 
+        socket.on('admin_leave', () => {
+            allUsers = adminUsers.filter((admin) => admin.id != socket.id);
+            //This is where we should send an email of all the messages we have sent
+        });
+
 
         //Normal User Section
         socket.on('join_room', (data) => {
             const { username, name, room } = data; // Data sent from client when join_room event emitted
             socket.join(room); // Join the user to a socket room
-            allUsers.push({ id: socket.id, username, room });
+            allUsers.push({ id: socket.id, username, room,name });
 
             let createdTime = Date.now();
 
@@ -104,7 +124,7 @@ const Socket = (server) => {
             io.in(room).emit('receive_message', introductoryMessage);
 
             roomMappedMessages[room].push(enterMessage, introductoryMessage);
-
+            alertAdmin()
         });
         // We can write our socket event listeners in here...
         socket.on('send_message', (data) => {
@@ -164,6 +184,7 @@ const Socket = (server) => {
 
             socket.leave(room);
             allUsers = allUsers.filter((user) => user.id != socket.id);
+            alertAdmin()
         });
     })
 }
