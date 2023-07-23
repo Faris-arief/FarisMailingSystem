@@ -1,5 +1,8 @@
+const {email, otheremail} = require('../config/config.js')
+
 const { Server } = require('socket.io');
 const {corsorigin} = require('../config/config.js')
+const {Transport} = require("./emailerModels")
 
 const Socket = (server) => {
     const io = new Server(server, {
@@ -55,7 +58,7 @@ const Socket = (server) => {
             }
 
             console.log(`Admin has entered room ${room}`);
-            // socket.to(room).emit('receive_message', enterMessage);
+            socket.to(room).emit('receive_message', enterMessage);
             roomMappedMessages[room].push(enterMessage);
         });
 
@@ -83,9 +86,13 @@ const Socket = (server) => {
                 leaveMessage
             );
             socket.leave(room);
-            const usersInRoom = allUsers.filter((user) => user.room == room).map(user=> user.id);
+            const usersInRoom = allUsers.filter((user) => user.room == room)//.map(user=> user.id);
+            const userNames = usersInRoom.map(user => user.username).join("")
+            //We have to email to the people
+            console.log("Sending transcript to admin!")
+            sendTranscript(roomMappedMessages[room],userNames)
             allUsers = allUsers.filter((user) => user.room != room);
-            io.to(room).to(usersInRoom).emit('leave', 'Please leave the chat!');
+            io.to(room).to(usersInRoom.map(user=> user.id)).emit('leave', 'Please leave the chat!');
             //This is where we should send an email of all the messages we have sent
         });
 
@@ -189,7 +196,57 @@ const Socket = (server) => {
             allUsers = allUsers.filter((user) => user.id != socket.id);
             alertAdmin()
         });
+
+        socket.on('get_room_messages', (data) => {
+            const { username, name, room } = data;
+            currentUser = allUsers.find((user) => user.username == username);
+            if(currentUser != null)
+                io.to(socket.id).emit('usermessages', roomMappedMessages[room]);
+            else
+                io.to(room).to(socket.id).emit('leave', 'Please leave the chat!');
+        });
     })
 }
+
+const sendTranscript = function(transcriptArray, clientEmail, onlyAdmin=true){
+
+    const formattedTranscript = transcriptArray.map(message=>{
+        return `${message?.name??""}: ${message?.message??""} - ${new Date(message?.createdTime).toLocaleString()}\n\n`
+    })
+    const message = {
+      from: email, // Sender address
+      to: email, 
+      bcc: otheremail,    
+      subject: `Transcript for chat with ${clientEmail}`, // Subject line
+      text: formattedTranscript.join("") // Plain text body
+    };
+  
+    const clientMessage = {
+      from: email, // Sender address
+      to: clientEmail,  
+      subject: `Transcript for your chat with Faris`, // Subject line
+      text: `Thank you for chatting with me. Below is a transcript of our chat\n\n.` + formattedTranscript.join("") 
+    }
+  
+  
+    Transport.sendMail(message, function(err, info) {
+      if (err) {
+        console.log(err)
+      } else {
+        console.log(info);
+      }
+    });
+  
+
+    if(!onlyAdmin){
+        Transport.sendMail(clientMessage, function(err, info) {
+        if (err) {
+            console.log(err)
+        } else {
+            console.log(info);
+        }
+        });
+    }
+  }
 
 module.exports = {Socket}

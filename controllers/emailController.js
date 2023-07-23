@@ -1,15 +1,5 @@
-
-const {service, email, password, otheremail} = require('../config/config.js')
-
-const nodemailer = require('nodemailer');
-
-let transport = nodemailer.createTransport({
-  service: service,
-  auth: {
-     user: email,
-     pass: password
-  }
-});
+const {email, otheremail} = require('../config/config.js')
+const {Transport} = require("../models/emailerModels")
 
 //This will now work
 
@@ -32,7 +22,7 @@ const sendEnquiryMail = function(req,res,next){
   };
 
 
-  const prom1= transport.sendMail(message, function(err, info) {
+  const prom1= Transport.sendMail(message, function(err, info) {
     if (err) {
       console.log(err)
     } else {
@@ -40,7 +30,7 @@ const sendEnquiryMail = function(req,res,next){
     }
   });
 
-  const prom2=transport.sendMail(responseMessage, function(err, info) {
+  const prom2=Transport.sendMail(responseMessage, function(err, info) {
     if (err) {
       console.log(err)
     } else {
