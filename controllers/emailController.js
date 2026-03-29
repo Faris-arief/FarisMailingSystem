@@ -47,6 +47,25 @@ const sendEnquiryMail = function(req,res,next){
   });
 }
 
+const sendHypersenseEnquiryMail = async function(req,res,next){
+
+  const message = {
+    from: email, // Sender address
+    to: email,
+    bcc: 'info@hypersense.ltd', 
+    subject: req.body.title, // Subject line
+    text: `${req.body.name} with the email ${req.body.email} sent the message below:\n` + req.body.message // Plain text body
+  };
 
 
-module.exports = {sendEnquiryMail};
+  await Transport.sendMail(message, function(err, info) {
+    if (err) {
+      console.log(err)
+    } else {
+      console.log(info);
+    }
+  });
+}
+
+
+module.exports = {sendEnquiryMail, sendHypersenseEnquiryMail};
